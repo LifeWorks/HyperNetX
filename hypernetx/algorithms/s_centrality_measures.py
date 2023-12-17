@@ -21,6 +21,7 @@ import networkx as nx
 import warnings
 import sys
 from functools import partial
+from multiprocessing import Pool
 
 try:
     import nwhy
@@ -32,7 +33,7 @@ except:
 sys.setrecursionlimit(10000)
 
 
-def _s_centrality(func, H, s=1, edges=True, f=None, return_singletons=True, **kwargs):
+def _s_centrality(func, H, s=1, edges=True, f=None, return_singletons=True, p = 1, **kwargs):
     """
     Wrapper for computing s-centrality either in NetworkX or in NWHy
 
@@ -70,7 +71,7 @@ def _s_centrality(func, H, s=1, edges=True, f=None, return_singletons=True, **kw
             return {f: 0}
 
     stats = dict()
-    for h in comps:
+    if p > 1:
         if edges:
             vertices = h.edges
         else:
@@ -79,16 +80,37 @@ def _s_centrality(func, H, s=1, edges=True, f=None, return_singletons=True, **kw
         if h.shape[edges * 1] == 1:
             stats = {v: 0 for v in vertices}
         else:
-            g = h.get_linegraph(s=s, edges=edges)
-            stats.update({k: v for k, v in func(g, **kwargs).items()})
-        if f:
-            return {f: stats[f]}
+            gs = [h.get_linegraph(s=s, edges=edges) for h in comps]
+
+            with Pool(processes=p) as pool:
+                stats_list = pool.map(partial(func, **kwargs), gs)
+            
+            for stat in stats_list:
+                stats.update({k: v for k, v in stat.items()})
+                
+            # g = h.get_linegraph(s=s, edges=edges)
+            # stats.update({k: v for k, v in func(g, **kwargs).items()})
+    else:
+        for h in comps:
+            if edges:
+                vertices = h.edges
+            else:
+                vertices = h.nodes
+
+            if h.shape[edges * 1] == 1:
+                stats = {v: 0 for v in vertices}
+            else:
+                g = h.get_linegraph(s=s, edges=edges)
+                stats.update({k: v for k, v in func(g, **kwargs).items()})
+
+    if f:
+        return {f: stats[f]}
 
     return stats
 
 
 def s_betweenness_centrality(
-    H, s=1, edges=True, normalized=True, return_singletons=True
+    H, s=1, edges=True, normalized=True, return_singletons=True, p = 1
 ):
     r"""
     A centrality measure for an s-edge(node) subgraph of H based on shortest paths.
@@ -135,6 +157,7 @@ def s_betweenness_centrality(
         s=s,
         edges=edges,
         return_singletons=return_singletons,
+        p=p,
     )
 
     if normalized and H.shape[edges * 1] > 2:
@@ -144,7 +167,9 @@ def s_betweenness_centrality(
         return result
 
 
-def s_closeness_centrality(H, s=1, edges=True, return_singletons=True, source=None):
+def s_closeness_centrality(
+    H, s=1, edges=True, return_singletons=True, source=None, p = 1
+    ):
     r"""
     In a connected component the reciprocal of the sum of the distance between an
     edge(node) and all other edges(nodes) in the component times the number of edges(nodes)
@@ -187,6 +212,7 @@ def s_closeness_centrality(H, s=1, edges=True, return_singletons=True, source=No
         edges=edges,
         return_singletons=return_singletons,
         f=source,
+        p=p,
     )
 
 
@@ -276,7 +302,13 @@ def s_harmonic_centrality(
     #     return result
 
 
-def s_eccentricity(H, s=1, edges=True, source=None, return_singletons=True):
+def s_eccentricity(
+    H, 
+    s=1, 
+    edges=True, 
+    source=None, 
+    return_singletons=True,
+    ):
     r"""
     The length of the longest shortest path from a vertex $u$ to every other vertex in
     the s-linegraph.
