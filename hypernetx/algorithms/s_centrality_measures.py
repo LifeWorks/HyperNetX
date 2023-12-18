@@ -21,7 +21,7 @@ import networkx as nx
 import warnings
 import sys
 from functools import partial
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 try:
     import nwhy
@@ -81,6 +81,9 @@ def _s_centrality(func, H, s=1, edges=True, f=None, return_singletons=True, p = 
             stats = {v: 0 for v in vertices}
         else:
             gs = [h.get_linegraph(s=s, edges=edges) for h in comps]
+
+            if p > cpu_count():
+                print("Warning: the parallel number is larger than system process number!")
 
             with Pool(processes=p) as pool:
                 stats_list = pool.map(partial(func, **kwargs), gs)
