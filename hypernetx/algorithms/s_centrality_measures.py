@@ -88,7 +88,7 @@ def _s_centrality(func, H, s=1, edges=True, f=None, return_singletons=True, p = 
             print("Warning: the parallel number is larger than system process number!")
 
         with Pool(processes=p) as pool:
-            stats_list = pool.map_unordered(partial(func, **kwargs), gs)
+            stats_list = pool.imap_unordered(partial(func, **kwargs), gs)
         
         for stat in stats_list:
             stats.update({k: v for k, v in stat.items()})
