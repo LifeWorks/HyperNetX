@@ -72,27 +72,27 @@ def _s_centrality(func, H, s=1, edges=True, f=None, return_singletons=True, p = 
 
     stats = dict()
     if p > 1:
-        if edges:
-            vertices = h.edges
-        else:
-            vertices = h.nodes
+        gs = []
+        for h in comps:
+            if edges:
+                vertices = h.edges
+            else:
+                vertices = h.nodes
 
-        if h.shape[edges * 1] == 1:
-            stats = {v: 0 for v in vertices}
-        else:
-            gs = [h.get_linegraph(s=s, edges=edges) for h in comps]
+            if h.shape[edges * 1] == 1:
+                stats = {v: 0 for v in vertices}
+            else:
+                gs.append(h.get_linegraph(s=s, edges=edges))
 
-            if p > cpu_count():
-                print("Warning: the parallel number is larger than system process number!")
+        if p > cpu_count():
+            print("Warning: the parallel number is larger than system process number!")
 
-            with Pool(processes=p) as pool:
-                stats_list = pool.map(partial(func, **kwargs), gs)
+        with Pool(processes=p) as pool:
+            stats_list = pool.map(partial(func, **kwargs), gs)
+        
+        for stat in stats_list:
+            stats.update({k: v for k, v in stat.items()})
             
-            for stat in stats_list:
-                stats.update({k: v for k, v in stat.items()})
-                
-            # g = h.get_linegraph(s=s, edges=edges)
-            # stats.update({k: v for k, v in func(g, **kwargs).items()})
     else:
         for h in comps:
             if edges:
