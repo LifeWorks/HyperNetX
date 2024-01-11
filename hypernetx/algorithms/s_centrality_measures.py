@@ -88,7 +88,7 @@ def _s_centrality(func, H, s=1, edges=True, f=None, return_singletons=True, **kw
 
 
 def s_betweenness_centrality(
-    H, s=1, edges=True, normalized=True, return_singletons=True
+    H, s=1, edges=True, normalized=True, return_singletons=True, source=None
 ):
     r"""
     A centrality measure for an s-edge(node) subgraph of H based on shortest paths.
@@ -121,6 +121,8 @@ def s_betweenness_centrality(
         where n is the number of edges in H
     return_singletons : bool, optional
         if False will ignore singleton components of linegraph
+    source : str, optional
+        Identifier of node or edge of interest for computing centrality
 
     Returns
     -------
@@ -135,6 +137,7 @@ def s_betweenness_centrality(
         s=s,
         edges=edges,
         return_singletons=return_singletons,
+        f=source,
     )
 
     if normalized and H.shape[edges * 1] > 2:
